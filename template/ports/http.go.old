@@ -1,0 +1,129 @@
+package template
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	t "github.com/weedien/notify-server/app/template"
+	"github.com/weedien/notify-server/app/template/command"
+	"github.com/weedien/notify-server/app/template/query"
+)
+
+type HttpServer struct {
+	app t.Application
+}
+
+func NewHttpServer(app t.Application) HttpServer {
+	return HttpServer{app: app}
+}
+
+func (s HttpServer) GetTemplates(w http.ResponseWriter, r *http.Request, params GetTemplatesParams) {
+	templateModels, err := s.app.Queries.TemplatesWithType.Handle(r.Context(), query.TemplatesWithTypeQuery{Type: *params.Type})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	templates := make([]Template, 0, len(templateModels))
+	for _, templateModel := range templateModels {
+		templates = append(templates, Template{
+			Content: templateModel.Content,
+			Slots:   templateModel.Slots,
+			Topic:   templateModel.Topic,
+			Type:    templateModel.Type,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(templates); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s HttpServer) CreateTemplate(w http.ResponseWriter, r *http.Request) {
+	var template Template
+	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := s.app.Commands.CreateTemplate.Handle(r.Context(), command.CreateTemplateCommand{
+		Content: template.Content,
+		Topic:   template.Topic,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (s HttpServer) DeleteTemplateById(w http.ResponseWriter, r *http.Request, tid string) {
+	id, err := strconv.Atoi(tid)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
+
+	err = s.app.Commands.DeleteTemplate.Handle(r.Context(), command.DeleteTemplateCommand{TemplateID: id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s HttpServer) GetTemplateById(w http.ResponseWriter, r *http.Request, tid string) {
+	id, err := strconv.Atoi(tid)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
+
+	templateModel, err := s.app.Queries.TemplateByID.Handle(r.Context(), query.TemplateIdQuery{ID: id})
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	template := Template{
+		Content: templateModel.Content,
+		Slots:   templateModel.Slots,
+		Topic:   templateModel.Topic,
+		Type:    templateModel.Type,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(template); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s HttpServer) UpdateTemplate(w http.ResponseWriter, r *http.Request, tid string) {
+	var body UpdateTemplateJSONBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(tid)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
+
+	err = s.app.Commands.UpdateTemplate.Handle(r.Context(), command.UpdateTemplateCommand{
+		Content:    body.Content,
+		Topic:      body.Topic,
+		TemplateID: id,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

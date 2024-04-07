@@ -1,0 +1,15 @@
+[Database]
+  Host     = "remote"
+  Port     = 3306
+  Username = "weedien"
+  Password = "031209"
+  Database = "countdown"
+  Params   = "parseTime=True&loc=Local"
+
+[Server]
+  Port = 8080
+
+[Email]
+  Sender     = "huixiang-yuan@qq.com"
+  Password   = "zeecylwdosctehag"
+  SMTPServer = "smtp.qq.com"
