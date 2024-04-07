@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/weedien/countdown-server/util"
+	"github.com/weedien/countdown-server/infra/util"
 )
 
 func BenchmarkRandomNum(b *testing.B) {
