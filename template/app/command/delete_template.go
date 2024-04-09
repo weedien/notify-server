@@ -9,7 +9,7 @@ import (
 )
 
 type DeleteTemplateCommand struct {
-	TemplateID int
+	TemplateID int64
 }
 
 type DeleteTemplateHandler decorator.CommandHandler[DeleteTemplateCommand]

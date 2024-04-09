@@ -8,7 +8,7 @@ import (
 )
 
 type TemplateIdQuery struct {
-	ID int
+	ID int64
 }
 
 type TemplateIdHandler decorator.QueryHandler[TemplateIdQuery, EmailTemplate]
@@ -31,9 +31,9 @@ func NewTemplateIdHandler(
 }
 
 type TemplateIdReadModel interface {
-	FindTemplateByID(ctx context.Context, id int) (EmailTemplate, error)
+	FindTemplateByID(ctx context.Context, id int64) (EmailTemplate, error)
 }
 
-func (h templateIdHandler) Handle(ctx context.Context, q TemplateIdQuery) (EmailTemplate, error) {
-	return h.readModel.FindTemplateByID(ctx, q.ID)
+func (h templateIdHandler) Handle(ctx context.Context, query TemplateIdQuery) (EmailTemplate, error) {
+	return h.readModel.FindTemplateByID(ctx, query.ID)
 }

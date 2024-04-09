@@ -6,11 +6,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/weedien/notify-server/common/decorator"
-	"github.com/weedien/notify-server/template/domain/template"
+	t "github.com/weedien/notify-server/template/domain/template"
 )
 
 type UpdateTemplateCommand struct {
-	TemplateID int
+	TemplateID int64
 	Topic      *string // 可选
 	Content    *string // 可选
 }
@@ -18,11 +18,11 @@ type UpdateTemplateCommand struct {
 type UpdateTemplateHandler decorator.CommandHandler[UpdateTemplateCommand]
 
 type updateTemplateHandler struct {
-	templateRepo template.Repository
+	templateRepo t.Repository
 }
 
-func NewUpdateTemplateContentHandler(
-	templateRepo template.Repository,
+func NewUpdateTemplateHandler(
+	templateRepo t.Repository,
 	logger *logrus.Entry,
 ) UpdateTemplateHandler {
 	if templateRepo == nil {
@@ -39,20 +39,12 @@ func NewUpdateTemplateContentHandler(
 // topic为空串是不合法的，content为空串是合法的，所以需要通过nil来判断是否传入了content
 func (h updateTemplateHandler) Handle(ctx context.Context, cmd UpdateTemplateCommand) error {
 	if cmd.TemplateID < 1 {
-		return errors.New("template id is invalid")
+		return errors.New("invalid template id")
 	}
 
-	temp := template.NewEmptyEmailTemplate()
-
-	if topic := cmd.Topic; topic != nil {
-		if len(*topic) > 0 {
-			temp.SetTopic(*topic)
-		} else {
-			return errors.New("topic should not be empty")
-		}
-	}
-	if content := cmd.Content; content != nil {
-		temp.SetContent(*content)
+	temp, err := t.NewEmailTemplateForUpdate(cmd.TemplateID, cmd.Topic, cmd.Content)
+	if err != nil {
+		return err
 	}
 
 	return h.templateRepo.Update(ctx, temp)

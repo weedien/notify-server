@@ -16,8 +16,8 @@ func (d commandLoggingDecorator[C]) Handle(ctx context.Context, cmd C) (err erro
 	handlerType := generateActionName(cmd)
 
 	logger := d.logger.WithFields(logrus.Fields{
-		"command":      handlerType,
-		"command_body": fmt.Sprintf("%#v", cmd),
+		"cmd":      handlerType,
+		"cmd_body": fmt.Sprintf("%#v", cmd),
 	})
 
 	logger.Debug("Executing command")

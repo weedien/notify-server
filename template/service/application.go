@@ -1,8 +1,6 @@
 package service
 
 import (
-	"context"
-
 	"github.com/sirupsen/logrus"
 	"github.com/weedien/notify-server/template/adapters"
 	t "github.com/weedien/notify-server/template/app"
@@ -10,8 +8,8 @@ import (
 	"github.com/weedien/notify-server/template/app/query"
 )
 
-func NewTemplateApp(ctx context.Context) t.Application {
-	db := adapters.GetDB()
+func NewTemplateApp() t.Application {
+	db := adapters.DB()
 
 	templateRepo := adapters.NewEmailTemplateRepository(db)
 
@@ -24,9 +22,8 @@ func NewTemplateApp(ctx context.Context) t.Application {
 			DeleteTemplate: command.NewDeleteTemplateHandler(templateRepo, logger),
 		},
 		Queries: t.Queries{
-			AllTemplates:      query.NewAllTemplatesHandler(templateRepo, logger),
-			TemplatesWithType: query.NewTemplatesWithTypeHandler(templateRepo, logger),
-			TemplateByID:      query.NewTemplateIdHandler(templateRepo, logger),
+			Templates:    query.NewTemplatesHandler(templateRepo, logger),
+			TemplateByID: query.NewTemplateIdHandler(templateRepo, logger),
 		},
 	}
 }

@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/weedien/notify-server/template/app/query"
+	q "github.com/weedien/notify-server/template/app/query"
 	t "github.com/weedien/notify-server/template/domain/template"
 	"gorm.io/gorm"
 )
 
 // EmailTemplateModel 实体类
 type EmailTemplateModel struct {
-	ID        int       `gorm:"primaryKey;autoIncrement"`
+	ID        int64     `gorm:"size:64;primaryKey;autoIncrement"`
 	Type      int       `gorm:"not null"`
 	Topic     string    `gorm:"size:64;not null"`
 	Slots     string    `gorm:"not null"`
@@ -25,7 +25,7 @@ type EmailTemplateModel struct {
 
 // TableName 指定表名
 func (EmailTemplateModel) TableName() string {
-	return "email_templates"
+	return "notify_templates"
 }
 
 type EmailTemplateRepository struct {
@@ -38,11 +38,20 @@ func NewEmailTemplateRepository(db *gorm.DB) *EmailTemplateRepository {
 
 // Create 插入模板
 func (r *EmailTemplateRepository) Create(ctx context.Context, template *t.EmailTemplate) error {
+	// 查询数据库中是否存在同名的topic
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&EmailTemplateModel{}).Where("topic = ?", template.Topic()).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("topic already exists")
+	}
+
 	model := EmailTemplateModel{
 		Type:    template.Type(),
 		Topic:   template.Topic(),
-		Slots:   strings.Join(template.Slots(), ","),
-		Content: template.Content().String,
+		Slots:   strings.Join(template.Content().Slots(), ","),
+		Content: template.Content().String(),
 	}
 	return r.db.WithContext(ctx).Create(&model).Error
 }
@@ -50,33 +59,45 @@ func (r *EmailTemplateRepository) Create(ctx context.Context, template *t.EmailT
 // Update 更新模板
 func (r *EmailTemplateRepository) Update(ctx context.Context, template *t.EmailTemplate) error {
 	// 查询模板是否存在
-	var model EmailTemplateModel
-	if err := r.db.WithContext(ctx).Where("deleted = ?", 0).First(&model, template.ID()).Error; err != nil {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&EmailTemplateModel{}).Where("id = ? AND deleted = ?", template.ID(), 0).Count(&count).Error
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
 		return errors.New("template not found")
 	}
-
-	q := r.db.WithContext(ctx).Model(&model).Where("id = ?", template.ID())
+	// 查询数据库中是否存在同名的topic
 	if template.Topic() != "" {
-		q = q.Update("topic", template.Topic())
+		if err := r.db.WithContext(ctx).Model(&EmailTemplateModel{}).Where("topic = ?", template.Topic()).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return errors.New("topic already exists")
+		}
 	}
-	if template.Content().Valid {
-		q = q.Update("content", template.Content().String)
-		q = q.Update("type", template.Type())
+
+	chain := r.db.WithContext(ctx).Model(&EmailTemplateModel{}).Where("id = ?", template.ID())
+	if template.Topic() != "" {
+		chain = chain.Update("topic", template.Topic())
 	}
-	if len(template.Slots()) > 0 {
-		q = q.Update("slots", strings.Join(template.Slots(), ","))
+	if template.Content() != nil {
+		chain = chain.Update("content", template.Content().String())
+		chain = chain.Update("type", template.Type())
+		chain = chain.Update("slots", strings.Join(template.Content().Slots(), ","))
 	}
-	return q.Error
+	return chain.Error
 }
 
-// 删除模板
-func (r *EmailTemplateRepository) Delete(ctx context.Context, id int) error {
+// Delete 删除模板
+func (r *EmailTemplateRepository) Delete(ctx context.Context, id int64) error {
 	// 逻辑删除
 	return r.db.WithContext(ctx).Where("id = ?", id).Update("deleted", 1).Error
 }
 
 // // 通过ID获取模板
-// func (r *EmailTemplateRepository) GetByID(ctx context.Context, id int) (*t.EmailTemplate, error) {
+// func (r *EmailTemplateRepository) GetByID(ctx context.Context, id int64) (*t.EmailTemplate, error) {
 // 	var model EmailTemplateModel
 // 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error; err != nil {
 // 		return nil, errors.New("template not found")
@@ -121,55 +142,51 @@ func (r *EmailTemplateRepository) Delete(ctx context.Context, id int) error {
 // 	return templates, nil
 // }
 
-func (r *EmailTemplateRepository) FindTemplateByID(ctx context.Context, id int) (query.EmailTemplate, error) {
+func (r *EmailTemplateRepository) FindTemplateByID(ctx context.Context, id int64) (q.EmailTemplate, error) {
 	var model EmailTemplateModel
 	if err := r.db.WithContext(ctx).Where("deleted = ?", 0).Where("id = ?", id).First(&model).Error; err != nil {
-		return query.EmailTemplate{}, err
+		return q.EmailTemplate{}, err
 	}
 
-	return query.EmailTemplate{
-		ID:      model.ID,
-		Type:    model.Type,
-		Topic:   model.Topic,
-		Content: model.Content,
-		Slots:   strings.Split(model.Slots, ","),
+	return q.EmailTemplate{
+		ID:         model.ID,
+		Type:       model.Type,
+		Topic:      model.Topic,
+		Content:    model.Content,
+		Slots:      strings.Split(model.Slots, ","),
+		UpdateTime: model.UpdatedAt,
 	}, nil
 }
 
-func (r *EmailTemplateRepository) AllTemplates(ctx context.Context) ([]query.EmailTemplate, error) {
+func (r *EmailTemplateRepository) Templates(ctx context.Context, query q.TemplatesQuery) ([]q.EmailTemplate, error) {
 	var models []EmailTemplateModel
-	if err := r.db.WithContext(ctx).Where("delete = ?", 0).Find(&models).Error; err != nil {
+
+	chain := r.db.WithContext(ctx).Where("deleted = ?", 0)
+
+	if query.Type != nil {
+		chain = chain.Where("type = ?", *query.Type)
+	}
+
+	if err := chain.Find(&models).Error; err != nil {
 		return nil, err
 	}
 
-	var templates []query.EmailTemplate
+	var templates []q.EmailTemplate
 	for _, model := range models {
-		template := query.EmailTemplate{
-			ID:      model.ID,
-			Type:    model.Type,
-			Topic:   model.Topic,
-			Content: model.Content,
-			Slots:   strings.Split(model.Slots, ","),
+		// 对内容进行截取
+		trimContent := model.Content
+		if query.ContentLen != nil && *query.ContentLen > 0 {
+			if len(model.Content) > *query.ContentLen {
+				trimContent = model.Content[:*query.ContentLen]
+			}
 		}
-		templates = append(templates, template)
-	}
-	return templates, nil
-}
-
-func (r *EmailTemplateRepository) FindTemplatesByType(ctx context.Context, _type int) ([]query.EmailTemplate, error) {
-	var models []EmailTemplateModel
-	if err := r.db.WithContext(ctx).Where("type = ? and deleted = ?", _type, 0).Find(&models).Error; err != nil {
-		return nil, err
-	}
-
-	var templates []query.EmailTemplate
-	for _, model := range models {
-		template := query.EmailTemplate{
-			ID:      model.ID,
-			Type:    model.Type,
-			Topic:   model.Topic,
-			Content: model.Content,
-			Slots:   strings.Split(model.Slots, ","),
+		template := q.EmailTemplate{
+			ID:         model.ID,
+			Type:       model.Type,
+			Topic:      model.Topic,
+			Content:    trimContent,
+			Slots:      strings.Split(model.Slots, ","),
+			UpdateTime: model.UpdatedAt,
 		}
 		templates = append(templates, template)
 	}

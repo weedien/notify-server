@@ -8,5 +8,5 @@ type Repository interface {
 	// Update 更新模板
 	Update(ctx context.Context, template *EmailTemplate) error
 	// Delete 删除模板
-	Delete(ctx context.Context, id int) error
+	Delete(ctx context.Context, id int64) error
 }

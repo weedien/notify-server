@@ -1,15 +1,26 @@
 [Database]
-  Host     = "remote"
-  Port     = 3306
-  Username = "weedien"
-  Password = "031209"
-  Database = "countdown"
-  Params   = "parseTime=True&loc=Local"
+Host = "193.112.178.249"
+Port = 3306
+Username = "weedien"
+Password = "031209"
+Database = "countdown"
+Params = "parseTime=True&loc=Local"
 
 [Server]
-  Port = 8080
+Port = 3000
+Env = "prod" # dev, test, prod
 
 [Email]
-  Sender     = "huixiang-yuan@qq.com"
-  Password   = "zeecylwdosctehag"
-  SMTPServer = "smtp.qq.com"
+Sender = "huixiang-yuan@qq.com"
+Password = "zeecylwdosctehag"
+SMTPServer = "smtp.qq.com"
+
+[Security]
+CorsAllowOrigins = "*"
+
+[Log]
+Level = "debug" # panic, fatal, error, warn, info, debug, trace
+Stdout = true
+#OutputPath = "app.log"
+Format = "custom" # text, json
+#Rotate = false

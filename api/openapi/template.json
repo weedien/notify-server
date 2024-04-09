@@ -31,11 +31,7 @@
                     "title": "邮件内容",
                     "maxLength": 65535
                   }
-                },
-                "required": [
-                  "topic",
-                  "content"
-                ]
+                }
               },
               "example": {
                 "type": 0,
@@ -183,7 +179,8 @@
             "description": "",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -270,7 +267,8 @@
             "description": "",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -354,7 +352,8 @@
             "description": "",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],
@@ -409,6 +408,11 @@
       "template": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "integer",
+            "description": "ID 编号",
+            "format": "int64"
+          },
           "type": {
             "type": "integer",
             "description": "1不完整需填充数据2完整",
@@ -432,8 +436,7 @@
           },
           "updateTime": {
             "type": "string",
-            "title": "更新时间",
-            "format": "date-time"
+            "title": "更新时间"
           }
         },
         "required": [
@@ -441,7 +444,8 @@
           "topic",
           "content",
           "slots",
-          "updateTime"
+          "updateTime",
+          "id"
         ]
       }
     },

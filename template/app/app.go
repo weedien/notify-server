@@ -17,7 +17,6 @@ type Commands struct {
 }
 
 type Queries struct {
-	AllTemplates      query.AllTemplatesHandler
-	TemplatesWithType query.TemplatesWithTypeHandler
-	TemplateByID      query.TemplateIdHandler
+	Templates    query.TemplatesHandler
+	TemplateByID query.TemplateIdHandler
 }

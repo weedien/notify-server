@@ -2,25 +2,24 @@ package command
 
 import (
 	"context"
-
 	"github.com/sirupsen/logrus"
 	"github.com/weedien/notify-server/common/decorator"
-	"github.com/weedien/notify-server/template/domain/template"
+	t "github.com/weedien/notify-server/template/domain/template"
 )
 
 type CreateTemplateCommand struct {
-	Topic   string
-	Content string
+	Topic   *string
+	Content *string
 }
 
 type CreateTemplateHandler decorator.CommandHandler[CreateTemplateCommand]
 
 type createTemplateHandler struct {
-	templateRepo template.Repository
+	templateRepo t.Repository
 }
 
 func NewCreateTemplateHandler(
-	templateRepo template.Repository,
+	templateRepo t.Repository,
 	logger *logrus.Entry,
 ) CreateTemplateHandler {
 	if templateRepo == nil {
@@ -33,7 +32,7 @@ func NewCreateTemplateHandler(
 }
 
 func (h createTemplateHandler) Handle(ctx context.Context, cmd CreateTemplateCommand) error {
-	template, err := template.NewEmailTemplate(cmd.Topic, cmd.Content)
+	template, err := t.NewEmailTemplate(cmd.Topic, cmd.Content)
 	if err != nil {
 		return err
 	}

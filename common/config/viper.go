@@ -1,7 +1,8 @@
-package common
+package config
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -9,7 +10,7 @@ import (
 
 type GlobalConfig struct {
 	// MySQL数据库配置
-	MySQL struct {
+	Database struct {
 		Host     string
 		Port     int
 		Username string
@@ -21,6 +22,7 @@ type GlobalConfig struct {
 	// http服务配置
 	Server struct {
 		Port int
+		Env  string
 	}
 
 	// 邮件服务配置
@@ -29,13 +31,26 @@ type GlobalConfig struct {
 		Password   string
 		SMTPServer string
 	}
+
+	// 安全配置
+	Security struct {
+		CorsAllowedOrigins string
+	}
+
+	Log struct {
+		Level      string
+		Stdout     bool
+		OutputPath string
+		Format     string
+		Rotate     bool
+	}
 }
 
-var CONFIG GlobalConfig
+var conf GlobalConfig
 
 func InitViper() *viper.Viper {
 	v := viper.New()
-	v.SetConfigFile("config.toml")
+	v.SetConfigFile("../config.toml")
 	v.SetConfigType("toml")
 	err := v.ReadInConfig()
 	if err != nil {
@@ -44,14 +59,20 @@ func InitViper() *viper.Viper {
 	v.WatchConfig()
 
 	v.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
-		// 验证配置文件合法性
-		if err = v.Unmarshal(&CONFIG); err != nil {
+		logrus.Info("Config file changed:", e.Name)
+		if err = v.Unmarshal(&conf); err != nil {
 			fmt.Println(err)
 		}
 	})
-	if err = v.Unmarshal(&CONFIG); err != nil {
+	if err = v.Unmarshal(&conf); err != nil {
 		fmt.Println(err)
 	}
 	return v
+}
+
+func Config() GlobalConfig {
+	if conf == (GlobalConfig{}) {
+		InitViper()
+	}
+	return conf
 }
